@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🤖 Heist Dashboard</title>
+    <link rel="stylesheet" href="/styles.css">
+    <script src="/socket.io/socket.io.js"></script>
+</head>
+<body>
+    <div class="container dashboard">
+        <div class="dashboard-header">
+            <div>
+                <h1 class="glitch" data-text="HEIST CONTROL PANEL">HEIST CONTROL PANEL</h1>
+                <h2 class="heist-name-display" id="missionNameDisplay">Loading...</h2>
+                <p class="heist-id-display">HEIST ID: <span id="heistIdDisplay">Loading...</span></p>
+            </div>
+            <div class="status-badge">
+                <span class="status-indicator"></span>
+                <span>ACTIVE</span>
+            </div>
+        </div>
+
+        <div class="organizer-info">
+            <p>👤 Organizer: <span id="organizerName">-</span></p>
+            <p>📅 Created: <span id="createdAt">-</span></p>
+        </div>
+
+        <div class="heist-summary">
+            <h3>📊 MISSION SUMMARY</h3>
+            <div class="summary-stats">
+                <div class="stat-card">
+                    <span class="stat-value" id="totalRooms">0</span>
+                    <span class="stat-label">Total Rooms</span>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-value" id="completedRooms">0</span>
+                    <span class="stat-label">Completed</span>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-value" id="failedRooms">0</span>
+                    <span class="stat-label">Failed</span>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-value" id="totalScore">0</span>
+                    <span class="stat-label">Total Score</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="rooms-section">
+            <div class="section-header">
+                <h2>🚪 BREAKOUT ROOMS</h2>
+                <button onclick="copyAllLinks()" class="cyber-button small">
+                    <span class="button-text">COPY ALL LINKS</span>
+                </button>
+            </div>
+
+            <div id="roomsContainer" class="rooms-grid">
+                <!-- Rooms will be populated here -->
+            </div>
+        </div>
+
+        <div class="dashboard-footer">
+            <button onclick="deleteHeist()" class="cyber-button danger">
+                <span class="button-text">🗑️ DELETE HEIST</span>
+            </button>
+            <button onclick="window.location.href='/'" class="cyber-button secondary">
+                <span class="button-text">← BACK TO HOME</span>
+            </button>
+        </div>
+    </div>
+
+    <script>
+        const heistId = window.location.pathname.split('/').pop();
+        const socket = io();
+        
+        // Mission name mapping
+        const MISSION_NAMES = {
+            'mission_obsidian_ledger': 'Operation Obsidian Ledger',
+            'mission_01': 'Mission 1: The Prometheus Breach',
+            'mission_02': 'Mission 2: Project Nightshade',
+            'mission_03': 'Mission 3: The Silicon Siege',
+            'mission_04': 'Mission 4: The Wireless War',
+            'mission_05': 'Mission 5: The Crypto Challenge',
+            'mission_06': 'Mission 6: The Poisoned Package',
+            'mission_07': 'Mission 7: The Insider',
+            'mission_08': 'Mission 8: The Leaky Bucket',
+            'mission_09': 'Mission 9: Android Anatomy',
+            'mission_10': 'Mission 10: Zero Trust'
+        };
+
+        function getMissionName(missionId) {
+            return MISSION_NAMES[missionId] || 'Unknown Mission';
+        }
+        
+        // Initialize dashboard
+        async function initDashboard() {
+            try {
+                const response = await fetch(`/api/heist/${heistId}`);
+                if (!response.ok) {
+                    throw new Error('Heist not found');
+                }
+                
+                const heist = await response.json();
+                displayHeistData(heist);
+                
+                // Join dashboard socket room
+                socket.emit('join-dashboard', { heistId });
+                
+            } catch (error) {
+                console.error('Error loading heist:', error);
+                alert('Heist not found. Redirecting to home...');
+                window.location.href = '/';
+            }
+        }
+
+        function displayHeistData(heist) {
+            const missionName = getMissionName(heist.missionId);
+            document.getElementById('missionNameDisplay').textContent = missionName;
+            document.getElementById('heistIdDisplay').textContent = heist.heistId;
+            document.getElementById('organizerName').textContent = heist.hostName;
+            document.getElementById('createdAt').textContent = new Date(heist.createdAt).toLocaleString();
+            
+            // Update page title
+            document.title = `🤖 ${missionName} - Dashboard`;
+            
+            // Calculate summary stats
+            const totalRooms = heist.rooms.length;
+            const completedRooms = heist.rooms.filter(r => r.missionStatus === 'COMPLETED').length;
+            const failedRooms = heist.rooms.filter(r => r.missionStatus === 'FAILED').length;
+            const totalScore = heist.rooms.reduce((sum, r) => sum + (r.score || 0), 0);
+            
+            document.getElementById('totalRooms').textContent = totalRooms;
+            document.getElementById('completedRooms').textContent = completedRooms;
+            document.getElementById('failedRooms').textContent = failedRooms;
+            document.getElementById('totalScore').textContent = totalScore;
+            
+            renderRooms(heist.rooms);
+        }
+
+        function renderRooms(rooms) {
+            const container = document.getElementById('roomsContainer');
+            container.innerHTML = '';
+            
+            rooms.forEach(room => {
+                const roomCard = document.createElement('div');
+                roomCard.className = 'room-card';
+                
+                const fullUrl = `${window.location.origin}${room.inviteLink}`;
+                const participantCount = room.participants.length;
+                
+                // Status badge
+                let statusBadge = '';
+                if (room.missionStatus === 'COMPLETED') {
+                    statusBadge = `<span class="status-badge completed">✅ COMPLETED - Score: ${room.score || 0}</span>`;
+                } else if (room.missionStatus === 'FAILED') {
+                    statusBadge = `<span class="status-badge failed">❌ FAILED</span>`;
+                } else if (room.missionStatus === 'STARTED') {
+                    statusBadge = `<span class="status-badge started">🎯 IN PROGRESS</span>`;
+                } else {
+                    statusBadge = `<span class="status-badge waiting">⏳ WAITING</span>`;
+                }
+                
+                // Results details
+                let resultsHtml = '';
+                if (room.missionStatus === 'COMPLETED') {
+                    resultsHtml = `
+                        <div class="room-results">
+                            <p><strong>Completed by:</strong> ${room.completedBy || 'Unknown'}</p>
+                            <p><strong>Time Taken:</strong> ${formatTime(room.timeTaken || 0)}</p>
+                            <p><strong>Steps Completed:</strong> ${room.stepsCompleted || 0}/7</p>
+                            ${room.stepsSkipped > 0 ? `<p><strong>Steps Skipped:</strong> ${room.stepsSkipped}</p>` : ''}
+                            ${room.hintsUsed > 0 ? `<p><strong>Hints Used:</strong> ${room.hintsUsed}</p>` : ''}
+                            ${room.bonusEarned > 0 ? `<p class="bonus">🌟 <strong>Perfect Bonus:</strong> +${room.bonusEarned} points</p>` : ''}
+                        </div>
+                    `;
+                }
+                
+                roomCard.innerHTML = `
+                    <div class="room-header">
+                        <h3>ROOM ${room.roomNumber}</h3>
+                        <span class="participant-badge">${participantCount} 👥</span>
+                    </div>
+                    ${statusBadge}
+                    ${resultsHtml}
+                    <div class="room-link">
+                        <input 
+                            type="text" 
+                            value="${fullUrl}" 
+                            readonly 
+                            class="link-input"
+                            id="link-${room.roomNumber}"
+                        >
+                        <button onclick="copyLink('${fullUrl}', ${room.roomNumber})" class="copy-btn">
+                            📋
+                        </button>
+                    </div>
+                    <div class="participants-list" id="participants-${room.roomNumber}">
+                        ${room.participants.map(p => `
+                            <span class="participant-chip">${p.name}</span>
+                        `).join('')}
+                        ${participantCount === 0 ? '<span class="empty-state">No participants yet</span>' : ''}
+                    </div>
+                `;
+                
+                container.appendChild(roomCard);
+            });
+        }
+
+        function formatTime(seconds) {
+            const mins = Math.floor(seconds / 60);
+            const secs = seconds % 60;
+            return `${mins}:${secs.toString().padStart(2, '0')}`;
+        }
+
+        function copyLink(url, roomNumber) {
+            navigator.clipboard.writeText(url).then(() => {
+                const btn = event.target;
+                btn.textContent = '✓';
+                setTimeout(() => {
+                    btn.textContent = '📋';
+                }, 2000);
+            });
+        }
+
+        function copyAllLinks() {
+            const inputs = document.querySelectorAll('.link-input');
+            const links = Array.from(inputs).map(input => input.value).join('\n');
+            
+            navigator.clipboard.writeText(links).then(() => {
+                alert('All room links copied to clipboard!');
+            });
+        }
+
+        async function deleteHeist() {
+            if (!confirm(`Are you sure you want to DELETE this heist?\n\nMission: ${document.getElementById('missionNameDisplay').textContent}\n\nThis action cannot be undone!`)) {
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/api/heist/${heistId}`, {
+                    method: 'DELETE'
+                });
+                
+                if (!response.ok) {
+                    throw new Error('Failed to delete heist');
+                }
+                
+                alert('Heist deleted successfully!');
+                window.location.href = '/';
+            } catch (error) {
+                console.error('Error deleting heist:', error);
+                alert('Error deleting heist. Please try again.');
+            }
+        }
+
+        // Socket.io real-time updates
+        socket.on('heist-update', (heist) => {
+            renderRooms(heist.rooms);
+        });
+
+        socket.on('error', (data) => {
+            console.error('Socket error:', data.message);
+        });
+
+        // Initialize on page load
+        initDashboard();
+    </script>
+</body>
+</html>

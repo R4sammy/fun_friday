@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🤖 Cyber Heist - Command Hub</title>
+    <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+    <div class="container">
+        <div class="glitch-container">
+            <h1 class="glitch" data-text="CYBER HEIST">CYBER HEIST</h1>
+        </div>
+        
+        <p class="subtitle">// TEAM COORDINATION PROTOCOL v2.0</p>
+
+        <div class="main-options">
+            <!-- Option 1: Join Existing Heist -->
+            <div class="option-card">
+                <h2>→ JOIN ACTIVE HEIST</h2>
+                <p class="description">Enter your assigned heist code</p>
+                <div class="input-group">
+                    <input 
+                        type="text" 
+                        id="heistIdInput" 
+                        placeholder="HEIST-ID-XXXX"
+                        class="cyber-input"
+                        autocomplete="off"
+                    >
+                    <button onclick="joinHeist()" class="cyber-button primary">
+                        <span class="button-text">ACCESS</span>
+                        <span class="button-glow"></span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Divider -->
+            <div class="divider">
+                <span>OR</span>
+            </div>
+
+            <!-- Option 2: Create New Heist -->
+            <div class="option-card">
+                <h2>→ INITIATE NEW HEIST</h2>
+                <p class="description">Deploy a new operation and generate breakout rooms</p>
+                <button onclick="showCreateModal()" class="cyber-button secondary">
+                    <span class="button-text">CREATE HEIST</span>
+                    <span class="button-glow"></span>
+                </button>
+            </div>
+        </div>
+
+        <div class="footer">
+            <p>[ SECURE CONNECTION ESTABLISHED ]</p>
+        </div>
+    </div>
+
+    <!-- Create Heist Modal -->
+    <div id="createModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>HEIST CONFIGURATION</h2>
+                <button class="close-btn" onclick="closeCreateModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="missionSelect">Select Mission *</label>
+                    <select 
+                        id="missionSelect" 
+                        class="cyber-input"
+                        required
+                    >
+                        <option value="">-- Choose Your Mission --</option>
+                        <option value="mission_obsidian_ledger">Operation Obsidian Ledger (Hard - Data Exfiltration)</option>
+                        <option value="mission_01">Mission 1: The Prometheus Breach (Easy - Red Team)</option>
+                        <option value="mission_02">Mission 2: Project Nightshade (Intermediate - Forensics)</option>
+                        <option value="mission_03">Mission 3: The Silicon Siege (Hard - Physical Security)</option>
+                        <option value="mission_04">Mission 4: The Wireless War (Intermediate - Network Security)</option>
+                        <option value="mission_05">Mission 5: The Crypto Challenge (Expert - Cryptography)</option>
+                        <option value="mission_06">Mission 6: The Poisoned Package (Intermediate - Supply Chain)</option>
+                        <option value="mission_07">Mission 7: The Insider (Hard - Insider Threat)</option>
+                        <option value="mission_08">Mission 8: The Leaky Bucket (Intermediate - Cloud Security)</option>
+                        <option value="mission_09">Mission 9: Android Anatomy (Advanced - Mobile Security)</option>
+                        <option value="mission_10">Mission 10: Zero Trust (Expert - Architecture)</option>
+                    </select>
+                    <small>Choose the mission type for your heist</small>
+                </div>
+                <div class="form-group">
+                    <label for="hostNameInput">Organizer Name *</label>
+                    <input 
+                        type="text" 
+                        id="hostNameInput" 
+                        placeholder="e.g., Agent Smith"
+                        class="cyber-input"
+                        required
+                    >
+                    <small>Enter your name or codename</small>
+                </div>
+                <div class="form-group">
+                    <label for="roomCountInput">Number of Breakout Rooms *</label>
+                    <input 
+                        type="number" 
+                        id="roomCountInput" 
+                        min="1" 
+                        max="50" 
+                        value="5"
+                        class="cyber-input"
+                        required
+                    >
+                    <small>Min: 1 | Max: 50</small>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button onclick="createHeist()" class="cyber-button primary">
+                    <span class="button-text">DEPLOY HEIST</span>
+                    <span class="button-glow"></span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Loading Overlay -->
+    <div id="loadingOverlay" class="loading-overlay">
+        <div class="loading-spinner"></div>
+        <p>INITIALIZING...</p>
+    </div>
+
+    <script src="/app.js"></script>
+</body>
+</html>

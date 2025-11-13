@@ -1,0 +1,901 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🤖 Heist Room</title>
+    <link rel="stylesheet" href="/styles.css">
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="/missions.js"></script>
+    <script src="/puzzles.js"></script>
+</head>
+<body>
+    <div class="container room-page">
+        <div class="room-header-section">
+            <h1 class="glitch" data-text="BREAKOUT ROOM">BREAKOUT ROOM</h1>
+            <div class="room-info">
+                <p class="room-number">ROOM <span id="roomNumberDisplay">-</span></p>
+                <p class="heist-id-small">Heist ID: <span id="heistIdDisplay">-</span></p>
+            </div>
+        </div>
+
+        <!-- Join Form (shown initially) -->
+        <div id="joinSection" class="join-section">
+            <h2>→ ENTER CREDENTIALS</h2>
+            <div class="form-group">
+                <label for="userNameInput">Your Name / Code Name</label>
+                <input 
+                    type="text" 
+                    id="userNameInput" 
+                    placeholder="Agent-007"
+                    class="cyber-input"
+                    autocomplete="off"
+                >
+            </div>
+            <button onclick="joinRoom()" class="cyber-button primary">
+                <span class="button-text">JOIN ROOM</span>
+                <span class="button-glow"></span>
+            </button>
+        </div>
+
+        <!-- Room View (shown after joining) -->
+        <div id="roomSection" class="room-section" style="display: none;">
+            <div class="welcome-message">
+                <p>✓ Connected as: <span id="currentUserName" class="user-name-display">-</span></p>
+            </div>
+
+            <!-- Mission Waiting Area -->
+            <div id="waitingArea" class="waiting-area">
+                <h2>⏳ MISSION BRIEFING</h2>
+                <p class="briefing-text">Waiting for all agents to ready up...</p>
+                
+                <div class="ready-status">
+                    <p><span id="readyCount">0</span> / <span id="totalCount">0</span> agents ready</p>
+                    <div id="readyList" class="ready-list"></div>
+                </div>
+
+                <button id="readyButton" onclick="readyForMission()" class="cyber-button primary large">
+                    <span class="button-text">🚀 START MISSION</span>
+                </button>
+                <p class="ready-hint">All team members must click START MISSION to begin</p>
+            </div>
+
+            <!-- Mission Section (hidden until mission starts) -->
+            <div id="missionArea" class="mission-section" style="display: none;">
+                <!-- Mission Objective Banner (Persistent) -->
+                <div class="mission-objective-banner">
+                    <div class="objective-header">
+                        <h2 id="missionTitle">🎯 OPERATION OBSIDIAN LEDGER</h2>
+                        <span class="difficulty-badge" id="difficultyBadge">HARD</span>
+                    </div>
+                    <div class="objective-details">
+                        <p class="target">📍 Target: <span id="missionTarget">-</span></p>
+                        <p class="objective">🎯 Objective: <span id="missionObjective">-</span></p>
+                    </div>
+                    <div class="mission-stats-container">
+                        <div class="mission-timer-container">
+                            <span class="timer-label">MISSION TIMER:</span>
+                            <span class="mission-timer" id="missionTimer">10:00</span>
+                        </div>
+                        <div class="team-score-container">
+                            <span class="score-label">TEAM SCORE:</span>
+                            <span class="team-score" id="teamScore">0</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Current Step Display -->
+                <div class="step-container">
+                    <div class="step-header">
+                        <h3>
+                            <span class="step-badge">STEP <span id="currentStepNumber">1</span>/<span id="totalSteps">7</span></span>
+                            <span id="stepTitle">The Service Entrance</span>
+                        </h3>
+                        <span class="location-badge" id="stepLocation">📍 Back Alley</span>
+                    </div>
+
+                    <div class="step-narrative">
+                        <p id="stepNarrative">Loading mission...</p>
+                    </div>
+
+                    <!-- Clues (if present) -->
+                    <div id="cluesSection" class="clues-section" style="display: none;">
+                        <h4>🔍 INTEL:</h4>
+                        <div id="cluesList" class="clues-list"></div>
+                    </div>
+
+                    <div class="step-question">
+                        <h4 id="stepQuestion">What is the code?</h4>
+                    </div>
+
+                    <!-- Dynamic Input Area -->
+                    <div id="inputArea" class="input-area">
+                        <!-- Will be populated based on input_type -->
+                    </div>
+
+                    <div id="answerFeedback" class="answer-feedback"></div>
+
+                    <!-- Hint Section -->
+                    <div class="hint-section">
+                        <button onclick="showHint()" id="hintButton" class="hint-button">💡 SHOW HINT (-30s penalty)</button>
+                        <p id="hintText" class="hint-text" style="display: none;">-</p>
+                    </div>
+
+                    <!-- Skip and Abort Actions -->
+                    <div class="step-actions">
+                        <button onclick="skipQuestion()" id="skipButton" class="cyber-button skip">
+                            <span class="button-text">⏭️ SKIP QUESTION (No Points)</span>
+                        </button>
+                        <button onclick="abortMission()" class="cyber-button abort">
+                            <span class="button-text">⚠️ ABORT MISSION</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Mission Failed Area -->
+            <div id="failedArea" class="mission-failed" style="display: none;">
+                <div class="failed-content">
+                    <h2>❌ MISSION FAILED</h2>
+                    <p id="failedMessage">The mission has been aborted.</p>
+                    <button onclick="window.location.href='/'" class="cyber-button secondary">
+                        <span class="button-text">← RETURN TO BASE</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Mission Completed Area -->
+            <div id="completedArea" class="mission-completed" style="display: none;">
+                <div class="completed-content">
+                    <h2>✅ MISSION COMPLETED</h2>
+                    <p id="completedMessage">Puzzle solved successfully!</p>
+                    <div class="final-score-display">
+                        <h3>🏆 FINAL TEAM SCORE</h3>
+                        <p class="score-value"><span id="finalScore">0</span> POINTS</p>
+                        <div id="scoreBreakdown" class="score-breakdown"></div>
+                    </div>
+                    <button onclick="window.location.href='/'" class="cyber-button primary">
+                        <span class="button-text">← RETURN TO BASE</span>
+                    </button>
+                </div>
+            </div>
+
+            <div id="participantsArea" class="participants-section">
+                <h2>👥 ACTIVE TEAM MEMBERS (<span id="participantCount">0</span>)</h2>
+                <div id="participantsList" class="participants-grid">
+                    <!-- Participants will be rendered here -->
+                </div>
+            </div>
+
+            <div class="room-actions">
+                <button onclick="leaveRoom()" class="cyber-button secondary">
+                    <span class="button-text">← LEAVE ROOM</span>
+                </button>
+            </div>
+        </div>
+
+        <div class="footer">
+            <button onclick="window.location.href='/'" class="link-button">← Back to Home</button>
+        </div>
+    </div>
+
+    <script>
+        const pathParts = window.location.pathname.split('/');
+        const heistId = pathParts[2];
+        const roomNumber = pathParts[4];
+        const socket = io();
+        
+        let currentUserName = '';
+        let isJoined = false;
+        let mission = null;
+        let currentStepIndex = 0;
+        let timerInterval = null;
+        let timeRemaining = 0;
+        let missionStatus = 'WAITING'; // WAITING, STARTED, FAILED, COMPLETED
+        let isReady = false;
+        let hintUsed = false;
+        let userAnswers = []; // Store answers for callback sequences
+        
+        // Scoring variables
+        let teamScore = 0;
+        let stepsCompleted = 0;
+        let stepsSkipped = 0;
+        let hintsUsedCount = 0;
+        let stepsWithHints = [];
+
+        // Initialize room page
+        async function initRoom() {
+            try {
+                const response = await fetch(`/api/heist/${heistId}/room/${roomNumber}`);
+                if (!response.ok) {
+                    throw new Error('Room not found');
+                }
+                
+                const data = await response.json();
+                document.getElementById('heistIdDisplay').textContent = data.heistId;
+                document.getElementById('roomNumberDisplay').textContent = data.room.roomNumber;
+                
+                // Load missions data first
+                await loadMissionsData();
+                
+                // Load the specific mission based on heist's missionId
+                const missionId = data.heist.missionId || 'mission_obsidian_ledger';
+                mission = getMissionByIdFormatted(missionId);
+                
+                if (!mission) {
+                    console.error('Mission not found, using default');
+                    mission = getMission();
+                }
+                
+            } catch (error) {
+                console.error('Error loading room:', error);
+                alert('Room not found. Redirecting to home...');
+                window.location.href = '/';
+            }
+        }
+
+        function loadMission() {
+            // Display mission objective (persistent)
+            document.getElementById('missionTitle').textContent = `🎯 ${mission.meta.title.toUpperCase()}`;
+            document.getElementById('missionTarget').textContent = mission.meta.target;
+            document.getElementById('missionObjective').textContent = mission.meta.objective;
+            document.getElementById('difficultyBadge').textContent = mission.meta.difficulty.toUpperCase();
+            document.getElementById('totalSteps').textContent = mission.steps.length;
+            
+            // Initialize timer for entire mission
+            timeRemaining = mission.meta.timer_settings.duration_seconds;
+            startMissionTimer();
+            
+            // Initialize score display
+            teamScore = 0;
+            stepsCompleted = 0;
+            stepsSkipped = 0;
+            hintsUsedCount = 0;
+            stepsWithHints = [];
+            updateScoreDisplay();
+            
+            // Load first step
+            currentStepIndex = 0;
+            loadCurrentStep();
+        }
+
+        function loadCurrentStep() {
+            const step = mission.steps[currentStepIndex];
+            
+            // Update step header
+            document.getElementById('currentStepNumber').textContent = currentStepIndex + 1;
+            document.getElementById('stepTitle').textContent = step.title;
+            document.getElementById('stepLocation').textContent = `📍 ${step.location}`;
+            
+            // Update narrative
+            document.getElementById('stepNarrative').innerHTML = step.narrative.replace(/\n/g, '<br>');
+            
+            // Update question
+            document.getElementById('stepQuestion').textContent = step.question;
+            
+            // Show clues if present
+            const cluesSection = document.getElementById('cluesSection');
+            if (step.clues && step.clues.length > 0) {
+                const cluesList = document.getElementById('cluesList');
+                cluesList.innerHTML = step.clues.map(clue => 
+                    `<div class="clue-item"><strong>${clue.label}:</strong> ${clue.value}</div>`
+                ).join('');
+                cluesSection.style.display = 'block';
+            } else {
+                cluesSection.style.display = 'none';
+            }
+            
+            // Update hint
+            document.getElementById('hintText').textContent = step.hint;
+            document.getElementById('hintText').style.display = 'none';
+            document.getElementById('hintButton').textContent = '💡 SHOW HINT (-30s penalty)';
+            document.getElementById('hintButton').disabled = false;
+            hintUsed = false;
+            
+            // Build input based on type
+            buildInputArea(step);
+            
+            // Clear feedback
+            document.getElementById('answerFeedback').textContent = '';
+        }
+
+        function buildInputArea(step) {
+            const inputArea = document.getElementById('inputArea');
+            
+            if (step.input_type === 'text' || step.input_type === 'numpad') {
+                inputArea.innerHTML = `
+                    <div class="answer-input-group">
+                        <input 
+                            type="text" 
+                            id="answerInput" 
+                            placeholder="${step.placeholder}"
+                            class="cyber-input"
+                            autocomplete="off"
+                            ${step.input_type === 'numpad' ? 'inputmode="numeric"' : ''}
+                        >
+                        <button onclick="submitAnswer()" class="cyber-button primary">
+                            <span class="button-text">SUBMIT</span>
+                        </button>
+                    </div>
+                `;
+                
+                // Add enter key handler
+                setTimeout(() => {
+                    const input = document.getElementById('answerInput');
+                    if (input) {
+                        input.addEventListener('keypress', (e) => {
+                            if (e.key === 'Enter') {
+                                submitAnswer();
+                            }
+                        });
+                        input.focus();
+                    }
+                }, 100);
+            } else if (step.input_type === 'multiple_choice') {
+                inputArea.innerHTML = `
+                    <div class="options-container">
+                        ${step.options.map(opt => `
+                            <label class="option-label">
+                                <input type="radio" name="answer" value="${opt.value}" id="${opt.id}">
+                                <span class="option-text">${opt.label}</span>
+                            </label>
+                        `).join('')}
+                    </div>
+                    <button onclick="submitAnswer()" class="cyber-button primary">
+                        <span class="button-text">SUBMIT ANSWER</span>
+                    </button>
+                `;
+            } else if (step.input_type === 'multi_select') {
+                inputArea.innerHTML = `
+                    <div class="options-container">
+                        ${step.options.map(opt => `
+                            <label class="option-label checkbox">
+                                <input type="checkbox" name="answer" value="${opt.value}" id="${opt.id}">
+                                <span class="option-text">${opt.label}</span>
+                            </label>
+                        `).join('')}
+                    </div>
+                    <button onclick="submitAnswer()" class="cyber-button primary">
+                        <span class="button-text">SUBMIT SELECTION</span>
+                    </button>
+                `;
+            }
+        }
+
+        function submitAnswer() {
+            if (missionStatus !== 'STARTED') return;
+            
+            const step = mission.steps[currentStepIndex];
+            let userAnswer = null;
+            
+            // Get answer based on input type
+            if (step.input_type === 'text' || step.input_type === 'numpad') {
+                const input = document.getElementById('answerInput');
+                userAnswer = input ? input.value.trim() : '';
+                
+                if (!userAnswer) {
+                    showFeedback('⚠️ Please enter an answer', 'error');
+                    return;
+                }
+            } else if (step.input_type === 'multiple_choice') {
+                const selected = document.querySelector('input[name="answer"]:checked');
+                if (!selected) {
+                    showFeedback('⚠️ Please select an option', 'error');
+                    return;
+                }
+                userAnswer = selected.value;
+            } else if (step.input_type === 'multi_select') {
+                const selected = Array.from(document.querySelectorAll('input[name="answer"]:checked'));
+                if (selected.length === 0) {
+                    showFeedback('⚠️ Please select at least one option', 'error');
+                    return;
+                }
+                userAnswer = selected.map(cb => cb.value);
+            }
+            
+            // Validate answer
+            const result = validateAnswer(userAnswer, step);
+            
+            if (result.success) {
+                // Store answer for callback sequences
+                userAnswers.push(userAnswer);
+                
+                // Update scoring - 1 point if no hint was used
+                if (!hintUsed) {
+                    teamScore++;
+                    stepsCompleted++;
+                } else {
+                    stepsWithHints.push(currentStepIndex + 1);
+                }
+                
+                updateScoreDisplay();
+                showFeedback(`✅ ${result.message}`, 'success');
+                
+                // Check if this was the last step
+                if (currentStepIndex === mission.steps.length - 1) {
+                    // Mission complete!
+                    completeMission();
+                } else {
+                    // Move to next step after brief delay
+                    setTimeout(() => {
+                        currentStepIndex++;
+                        loadCurrentStep();
+                    }, 2000);
+                }
+            } else {
+                showFeedback(`❌ ${result.message}`, 'error');
+                
+                // Clear input for retry
+                if (step.input_type === 'text' || step.input_type === 'numpad') {
+                    document.getElementById('answerInput').value = '';
+                } else if (step.input_type === 'multiple_choice') {
+                    document.querySelectorAll('input[name="answer"]').forEach(radio => {
+                        radio.checked = false;
+                    });
+                } else if (step.input_type === 'multi_select') {
+                    document.querySelectorAll('input[name="answer"]').forEach(cb => {
+                        cb.checked = false;
+                    });
+                }
+            }
+        }
+
+        function skipQuestion() {
+            if (missionStatus !== 'STARTED') return;
+            
+            if (!confirm('Are you sure you want to SKIP this question? You will receive 0 points for this step.')) {
+                return;
+            }
+            
+            // Track skipped step
+            stepsSkipped++;
+            userAnswers.push('SKIPPED');
+            
+            // Check if this was the last step
+            if (currentStepIndex === mission.steps.length - 1) {
+                // Last step skipped - mission incomplete
+                showFeedback('⏭️ Last question skipped. Mission incomplete.', 'error');
+                setTimeout(() => {
+                    missionIncomplete();
+                }, 1500);
+            } else {
+                // Move to next step after brief delay
+                showFeedback('⏭️ Question skipped. No points awarded.', 'warning');
+                setTimeout(() => {
+                    currentStepIndex++;
+                    loadCurrentStep();
+                }, 1500);
+            }
+        }
+
+        function updateScoreDisplay() {
+            document.getElementById('teamScore').textContent = teamScore;
+        }
+
+        function missionIncomplete() {
+            missionStatus = 'COMPLETED'; // Mark as completed but incomplete
+            clearInterval(timerInterval);
+            
+            // Calculate final score
+            let finalScore = teamScore;
+            
+            // Create score breakdown
+            const breakdown = [];
+            breakdown.push(`⚠️ Mission Incomplete - Last step skipped`);
+            breakdown.push(`Steps Completed: ${stepsCompleted}/${mission.steps.length}`);
+            breakdown.push(`Steps Skipped: ${stepsSkipped}`);
+            breakdown.push(`Points from Steps: ${teamScore}`);
+            if (hintsUsedCount > 0) {
+                breakdown.push(`Hints Used: ${hintsUsedCount} (steps with hints: 0 points)`);
+            }
+            breakdown.push(`⚠️ No bonus - Mission incomplete`);
+            
+            // Update display
+            updateScoreDisplay();
+            document.getElementById('finalScore').textContent = finalScore;
+            document.getElementById('scoreBreakdown').innerHTML = breakdown.map(line => 
+                `<p>${line}</p>`
+            ).join('');
+            
+            // Notify server with scoring data
+            socket.emit('mission-completed', {
+                heistId,
+                roomNumber: parseInt(roomNumber),
+                completedBy: currentUserName,
+                timeTaken: mission.meta.timer_settings.duration_seconds - timeRemaining,
+                score: finalScore,
+                stepsCompleted: stepsCompleted,
+                stepsSkipped: stepsSkipped,
+                hintsUsed: hintsUsedCount,
+                bonusEarned: 0,
+                incomplete: true
+            });
+            
+            // Show completion screen with incomplete message immediately
+            showMissionArea('completed');
+            document.getElementById('completedMessage').textContent = 
+                `⚠️ Mission incomplete by ${currentUserName}. Time: ${formatTime(mission.meta.timer_settings.duration_seconds - timeRemaining)}`;
+        }
+
+        function completeMission() {
+            missionStatus = 'COMPLETED';
+            clearInterval(timerInterval);
+            
+            // Calculate final score with bonus
+            let finalScore = teamScore;
+            let bonusPoints = 0;
+            
+            // Bonus: +3 points if all steps completed without any hints
+            if (stepsCompleted === mission.steps.length && hintsUsedCount === 0) {
+                bonusPoints = 3;
+                finalScore += bonusPoints;
+            }
+            
+            // Create score breakdown
+            const breakdown = [];
+            breakdown.push(`Steps Completed: ${stepsCompleted}/${mission.steps.length}`);
+            breakdown.push(`Points from Steps: ${teamScore}`);
+            if (stepsSkipped > 0) {
+                breakdown.push(`Steps Skipped: ${stepsSkipped} (0 points)`);
+            }
+            if (hintsUsedCount > 0) {
+                breakdown.push(`Hints Used: ${hintsUsedCount} (steps with hints: 0 points)`);
+            }
+            if (bonusPoints > 0) {
+                breakdown.push(`🌟 Perfect Bonus: +${bonusPoints} (no hints used!)`);
+            }
+            
+            // Update display
+            updateScoreDisplay();
+            document.getElementById('finalScore').textContent = finalScore;
+            document.getElementById('scoreBreakdown').innerHTML = breakdown.map(line => 
+                `<p>${line}</p>`
+            ).join('');
+            
+            // Notify server with scoring data
+            socket.emit('mission-completed', {
+                heistId,
+                roomNumber: parseInt(roomNumber),
+                completedBy: currentUserName,
+                timeTaken: mission.meta.timer_settings.duration_seconds - timeRemaining,
+                score: finalScore,
+                stepsCompleted: stepsCompleted,
+                stepsSkipped: stepsSkipped,
+                hintsUsed: hintsUsedCount,
+                bonusEarned: bonusPoints
+            });
+            
+            // Show completion screen
+            setTimeout(() => {
+                showMissionArea('completed');
+                document.getElementById('completedMessage').textContent = 
+                    `🎉 Mission completed by ${currentUserName}! Time: ${formatTime(mission.meta.timer_settings.duration_seconds - timeRemaining)}`;
+            }, 1500);
+        }
+
+        function showHint() {
+            if (hintUsed) return;
+            
+            if (!confirm('Using a hint will deduct 30 seconds from your mission timer AND you will NOT earn points for this step. Continue?')) {
+                return;
+            }
+            
+            hintUsed = true;
+            hintsUsedCount++;
+            
+            // Deduct 30 seconds
+            const penalty = mission.meta.timer_settings.penalty_per_hint;
+            timeRemaining = Math.max(0, timeRemaining - penalty);
+            updateTimerDisplay();
+            
+            // Show hint
+            document.getElementById('hintText').style.display = 'block';
+            document.getElementById('hintButton').textContent = '💡 HINT SHOWN (No points for this step)';
+            document.getElementById('hintButton').disabled = true;
+            
+            showFeedback(`⚠️ -${penalty} seconds penalty applied. No points for this step.`, 'warning');
+        }
+
+        function startMissionTimer() {
+            if (timerInterval) clearInterval(timerInterval);
+            
+            updateTimerDisplay();
+            
+            timerInterval = setInterval(() => {
+                if (missionStatus === 'STARTED' && timeRemaining > 0) {
+                    timeRemaining--;
+                    updateTimerDisplay();
+                    
+                    if (timeRemaining === 0) {
+                        clearInterval(timerInterval);
+                        missionFailed(mission.meta.timer_settings.time_up_message);
+                    }
+                }
+            }, 1000);
+        }
+
+        function updateTimerDisplay() {
+            const minutes = Math.floor(timeRemaining / 60);
+            const seconds = timeRemaining % 60;
+            const display = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+            document.getElementById('missionTimer').textContent = display;
+            
+            // Change color based on time
+            const timerElement = document.getElementById('missionTimer');
+            if (timeRemaining < 60) {
+                timerElement.style.color = '#ff0044';
+                timerElement.style.textShadow = '0 0 10px #ff0044';
+            } else if (timeRemaining < 180) {
+                timerElement.style.color = '#ffff00';
+                timerElement.style.textShadow = '0 0 10px #ffff00';
+            } else {
+                timerElement.style.color = '#00ff00';
+                timerElement.style.textShadow = '0 0 10px #00ff00';
+            }
+        }
+
+        function missionFailed(message) {
+            missionStatus = 'FAILED';
+            clearInterval(timerInterval);
+            
+            showMissionArea('failed');
+            document.getElementById('failedMessage').textContent = message;
+            
+            // Notify server
+            socket.emit('mission-failed', {
+                heistId,
+                roomNumber: parseInt(roomNumber),
+                reason: 'timeout'
+            });
+        }
+
+        function readyForMission() {
+            if (isReady) return;
+            
+            isReady = true;
+            document.getElementById('readyButton').disabled = true;
+            document.getElementById('readyButton').style.opacity = '0.5';
+            
+            socket.emit('ready-for-mission', {
+                heistId,
+                roomNumber: parseInt(roomNumber),
+                userName: currentUserName
+            });
+        }
+
+        function abortMission() {
+            if (!confirm('Are you sure you want to ABORT the mission? This will fail the mission for everyone!')) {
+                return;
+            }
+            
+            socket.emit('abort-mission', {
+                heistId,
+                roomNumber: parseInt(roomNumber),
+                userName: currentUserName
+            });
+        }
+
+        function showMissionArea(area) {
+            // Hide all areas
+            document.getElementById('waitingArea').style.display = 'none';
+            document.getElementById('missionArea').style.display = 'none';
+            document.getElementById('failedArea').style.display = 'none';
+            document.getElementById('completedArea').style.display = 'none';
+            
+            // Show requested area
+            if (area === 'waiting') {
+                document.getElementById('waitingArea').style.display = 'block';
+                document.getElementById('participantsArea').style.display = 'block';
+            } else if (area === 'mission') {
+                document.getElementById('missionArea').style.display = 'block';
+                document.getElementById('participantsArea').style.display = 'block';
+            } else if (area === 'failed') {
+                document.getElementById('failedArea').style.display = 'block';
+                document.getElementById('participantsArea').style.display = 'none';
+            } else if (area === 'completed') {
+                document.getElementById('completedArea').style.display = 'block';
+                document.getElementById('participantsArea').style.display = 'block';
+            }
+        }
+
+        function startTimer() {
+            // Deprecated - now using startMissionTimer
+            startMissionTimer();
+        }
+
+        function toggleHint() {
+            // Deprecated - now using showHint
+            showHint();
+        }
+
+        function formatTime(seconds) {
+            const mins = Math.floor(seconds / 60);
+            const secs = seconds % 60;
+            return `${mins}:${secs.toString().padStart(2, '0')}`;
+        }
+
+        function showFeedback(message, type) {
+            const feedback = document.getElementById('answerFeedback');
+            feedback.textContent = message;
+            feedback.className = `answer-feedback ${type}`;
+            
+            setTimeout(() => {
+                if (type !== 'success') {
+                    feedback.textContent = '';
+                }
+            }, 3000);
+        }
+
+        function joinRoom() {
+            const userName = document.getElementById('userNameInput').value.trim();
+            
+            if (!userName) {
+                alert('Please enter your name or code name');
+                return;
+            }
+
+            currentUserName = userName;
+            
+            // Emit join event
+            socket.emit('join-room', {
+                heistId,
+                roomNumber: parseInt(roomNumber),
+                userName
+            });
+            
+            // Switch views
+            document.getElementById('joinSection').style.display = 'none';
+            document.getElementById('roomSection').style.display = 'block';
+            document.getElementById('currentUserName').textContent = userName;
+            
+            // Show waiting area by default
+            showMissionArea('waiting');
+            
+            isJoined = true;
+        }
+
+        function leaveRoom() {
+            if (confirm('Are you sure you want to leave this room?')) {
+                socket.disconnect();
+                window.location.href = '/';
+            }
+        }
+
+        function renderParticipants(participants) {
+            const container = document.getElementById('participantsList');
+            const countElement = document.getElementById('participantCount');
+            
+            countElement.textContent = participants.length;
+            
+            if (participants.length === 0) {
+                container.innerHTML = '<p class="empty-state">No participants in this room yet</p>';
+                return;
+            }
+            
+            container.innerHTML = participants.map(p => `
+                <div class="participant-card ${p.name === currentUserName ? 'current-user' : ''}">
+                    <div class="participant-avatar">
+                        ${p.name.charAt(0).toUpperCase()}
+                    </div>
+                    <div class="participant-name">${p.name}</div>
+                    ${p.name === currentUserName ? '<span class="you-badge">YOU</span>' : ''}
+                </div>
+            `).join('');
+        }
+
+        // Socket.io event handlers
+        socket.on('room-update', (data) => {
+            if (data.roomNumber === parseInt(roomNumber)) {
+                renderParticipants(data.participants);
+                missionStatus = data.missionStatus || 'WAITING';
+            }
+        });
+
+        socket.on('mission-status', (data) => {
+            missionStatus = data.status;
+            
+            if (data.locked && missionStatus === 'WAITING') {
+                // Room is locked but still waiting, shouldn't happen
+                alert('This room is locked. Mission already in progress.');
+                window.location.href = '/';
+            }
+        });
+
+        socket.on('room-locked', (data) => {
+            alert(data.message);
+            window.location.href = '/';
+        });
+
+        socket.on('ready-update', (data) => {
+            const readyCount = data.readyParticipants.length;
+            const totalCount = data.totalParticipants;
+            
+            document.getElementById('readyCount').textContent = readyCount;
+            document.getElementById('totalCount').textContent = totalCount;
+            
+            // Update ready list
+            const readyList = document.getElementById('readyList');
+            if (readyCount > 0) {
+                readyList.innerHTML = data.readyParticipants.map(name => 
+                    `<span class="ready-indicator">✓ ${name}</span>`
+                ).join('');
+            } else {
+                readyList.innerHTML = '<span class="not-ready">No agents ready yet</span>';
+            }
+        });
+
+        socket.on('mission-started', (data) => {
+            missionStatus = 'STARTED';
+            showMissionArea('mission');
+            loadMission();
+            
+            // Show notification
+            showFeedback(data.message, 'success');
+            
+            setTimeout(() => {
+                document.getElementById('answerFeedback').textContent = '';
+            }, 3000);
+        });
+
+        socket.on('mission-aborted', (data) => {
+            missionStatus = 'FAILED';
+            clearInterval(timerInterval);
+            
+            showMissionArea('failed');
+            document.getElementById('failedMessage').textContent = data.message;
+        });
+
+        socket.on('mission-completed', (data) => {
+            if (data.completedBy !== currentUserName && missionStatus === 'STARTED') {
+                missionStatus = 'COMPLETED';
+                clearInterval(timerInterval);
+                
+                showMissionArea('completed');
+                document.getElementById('completedMessage').textContent = 
+                    `🎉 Mission completed by ${data.completedBy}! Time: ${formatTime(data.timeTaken)}`;
+            }
+        });
+
+        socket.on('mission-failed', (data) => {
+            if (missionStatus === 'STARTED') {
+                missionStatus = 'FAILED';
+                clearInterval(timerInterval);
+                
+                showMissionArea('failed');
+                document.getElementById('failedMessage').textContent = data.reason || 'Mission failed.';
+            }
+        });
+
+        socket.on('error', (data) => {
+            console.error('Socket error:', data.message);
+            alert(data.message);
+        });
+
+        // Handle page unload
+        window.addEventListener('beforeunload', () => {
+            if (isJoined) {
+                socket.disconnect();
+            }
+            if (timerInterval) {
+                clearInterval(timerInterval);
+            }
+        });
+
+        // Enter key to join
+        document.addEventListener('DOMContentLoaded', () => {
+            const input = document.getElementById('userNameInput');
+            if (input) {
+                input.addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter') {
+                        joinRoom();
+                    }
+                });
+                input.focus();
+            }
+        });
+
+        // Initialize on page load
+        initRoom();
+    </script>
+</body>
+</html>
