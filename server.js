@@ -6,7 +6,16 @@ const path = require('path');
 
 const app = express();
 const server = http.createServer(app);
-const io = socketIo(server);
+const io = socketIo(server, {
+  cors: {
+    origin: "*",
+    methods: ["GET", "POST"]
+  },
+  transports: ['websocket', 'polling'],
+  allowEIO3: true,
+  pingTimeout: 60000,
+  pingInterval: 25000
+});
 
 const PORT = process.env.PORT || 3000;
 
@@ -151,26 +160,37 @@ app.get('/api/heists', (req, res) => {
 
 // Socket.io real-time events
 io.on('connection', (socket) => {
-  console.log('New client connected:', socket.id);
+  console.log(`[${new Date().toISOString()}] New client connected:`, socket.id);
 
   // Join a specific heist room
   socket.on('join-room', ({ heistId, roomNumber, userName }) => {
+    console.log(`[JOIN] Attempt - HeistID: ${heistId}, Room: ${roomNumber}, User: ${userName}, SocketID: ${socket.id}`);
+    
     const heist = heists.get(heistId);
 
     if (!heist) {
-      socket.emit('error', { message: 'Heist not found' });
+      console.log(`[JOIN] Failed - Heist not found: ${heistId}`);
+      console.log(`[DEBUG] Active heists:`, Array.from(heists.keys()));
+      socket.emit('error', { 
+        message: `Heist not found. Active heists: ${Array.from(heists.keys()).join(', ') || 'none'}` 
+      });
       return;
     }
 
     const room = heist.rooms.find(r => r.roomNumber === parseInt(roomNumber));
 
     if (!room) {
-      socket.emit('error', { message: 'Room not found' });
+      console.log(`[JOIN] Failed - Room not found: ${roomNumber} in heist ${heistId}`);
+      console.log(`[DEBUG] Available rooms:`, heist.rooms.map(r => r.roomNumber));
+      socket.emit('error', { 
+        message: `Room ${roomNumber} not found. Available rooms: ${heist.rooms.map(r => r.roomNumber).join(', ')}` 
+      });
       return;
     }
 
     // Check if room is locked
     if (room.locked) {
+      console.log(`[JOIN] Failed - Room locked: ${roomNumber}`);
       socket.emit('room-locked', { 
         message: 'This room is locked. Mission already in progress.' 
       });
@@ -183,10 +203,15 @@ io.on('connection', (socket) => {
         id: socket.id,
         name: userName || `Agent-${socket.id.substring(0, 4)}`
       });
+      console.log(`[JOIN] New user added: ${userName}`);
+    } else {
+      console.log(`[JOIN] User reconnected: ${userName}`);
     }
 
     // Join socket room
     socket.join(`heist-${heistId}-room-${roomNumber}`);
+    
+    console.log(`[JOIN] Success - ${userName} joined heist-${heistId}-room-${roomNumber}. Total participants: ${room.participants.length}`);
 
     // Send mission status to the joining user
     socket.emit('mission-status', {
@@ -407,6 +432,11 @@ io.on('connection', (socket) => {
         }
       });
     });
+  });
+
+  // Handle disconnect
+  socket.on('disconnect', () => {
+    console.log(`[${new Date().toISOString()}] Client disconnected:`, socket.id);
   });
 });
 

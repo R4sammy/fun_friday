@@ -73,7 +73,12 @@
 
     <script>
         const heistId = window.location.pathname.split('/').pop();
-        const socket = io();
+        const socket = io({
+            transports: ['websocket', 'polling'],
+            reconnection: true,
+            reconnectionDelay: 1000,
+            reconnectionAttempts: 5
+        });
         
         // Mission name mapping
         const MISSION_NAMES = {

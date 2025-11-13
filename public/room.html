@@ -11,6 +11,11 @@
 </head>
 <body>
     <div class="container room-page">
+        <!-- Connection Status Indicator -->
+        <div style="position: fixed; top: 10px; right: 10px; font-size: 0.8rem; z-index: 9999; background: rgba(0,0,0,0.8); padding: 5px 10px; border-radius: 5px; border: 1px solid var(--border-color);">
+            <span id="connectionStatus">🟡 Connecting...</span>
+        </div>
+        
         <div class="room-header-section">
             <h1 class="glitch" data-text="BREAKOUT ROOM">BREAKOUT ROOM</h1>
             <div class="room-info">
@@ -183,7 +188,12 @@
         const pathParts = window.location.pathname.split('/');
         const heistId = pathParts[2];
         const roomNumber = pathParts[4];
-        const socket = io();
+        const socket = io({
+            transports: ['websocket', 'polling'],
+            reconnection: true,
+            reconnectionDelay: 1000,
+            reconnectionAttempts: 5
+        });
         
         let currentUserName = '';
         let isJoined = false;
@@ -202,6 +212,35 @@
         let stepsSkipped = 0;
         let hintsUsedCount = 0;
         let stepsWithHints = [];
+
+        // Connection status handlers
+        socket.on('connect', () => {
+            console.log('Socket connected:', socket.id);
+            const statusEl = document.getElementById('connectionStatus');
+            if (statusEl) {
+                statusEl.textContent = '🟢 Connected';
+                statusEl.style.color = 'var(--success-green)';
+            }
+        });
+
+        socket.on('disconnect', () => {
+            console.log('Socket disconnected');
+            const statusEl = document.getElementById('connectionStatus');
+            if (statusEl) {
+                statusEl.textContent = '🔴 Disconnected';
+                statusEl.style.color = 'var(--error-red)';
+            }
+        });
+
+        socket.on('connect_error', (error) => {
+            console.error('Connection error:', error);
+            const statusEl = document.getElementById('connectionStatus');
+            if (statusEl) {
+                statusEl.textContent = '⚠️ Connection Error';
+                statusEl.style.color = 'var(--error-red)';
+            }
+            showFeedback('Connection error. Please refresh the page.', 'error');
+        });
 
         // Initialize room page
         async function initRoom() {
