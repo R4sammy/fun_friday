@@ -451,8 +451,8 @@
             stepsSkipped++;
             userAnswers.push('SKIPPED');
             
-            // Check if this was the last step
-            if (currentStepIndex === mission.steps.length - 1) {
+            // Check if this was the last step (check BEFORE incrementing)
+            if (currentStepIndex >= mission.steps.length - 1) {
                 // Last step skipped - mission incomplete
                 showFeedback('⏭️ Last question skipped. Mission incomplete.', 'error');
                 setTimeout(() => {
@@ -481,20 +481,21 @@
             
             // Create score breakdown
             const breakdown = [];
-            breakdown.push(`⚠️ Mission Incomplete - Last step skipped`);
+            breakdown.push(`<strong>⚠️ Mission Incomplete - Last step skipped</strong>`);
             breakdown.push(`Steps Completed: ${stepsCompleted}/${mission.steps.length}`);
             breakdown.push(`Steps Skipped: ${stepsSkipped}`);
             breakdown.push(`Points from Steps: ${teamScore}`);
             if (hintsUsedCount > 0) {
                 breakdown.push(`Hints Used: ${hintsUsedCount} (steps with hints: 0 points)`);
             }
-            breakdown.push(`⚠️ No bonus - Mission incomplete`);
+            breakdown.push(`<strong>⚠️ No bonus - Mission incomplete</strong>`);
             
             // Update display
+            teamScore = finalScore;
             updateScoreDisplay();
             document.getElementById('finalScore').textContent = finalScore;
             document.getElementById('scoreBreakdown').innerHTML = breakdown.map(line => 
-                `<p>${line}</p>`
+                `<p class="breakdown-item">${line}</p>`
             ).join('');
             
             // Notify server with scoring data
@@ -511,7 +512,7 @@
                 incomplete: true
             });
             
-            // Show completion screen with incomplete message immediately
+            // Show completion screen with incomplete message
             showMissionArea('completed');
             document.getElementById('completedMessage').textContent = 
                 `⚠️ Mission incomplete by ${currentUserName}. Time: ${formatTime(mission.meta.timer_settings.duration_seconds - timeRemaining)}`;
@@ -533,7 +534,7 @@
             
             // Create score breakdown
             const breakdown = [];
-            breakdown.push(`Steps Completed: ${stepsCompleted}/${mission.steps.length}`);
+            breakdown.push(`<strong>Steps Completed: ${stepsCompleted}/${mission.steps.length}</strong>`);
             breakdown.push(`Points from Steps: ${teamScore}`);
             if (stepsSkipped > 0) {
                 breakdown.push(`Steps Skipped: ${stepsSkipped} (0 points)`);
@@ -542,14 +543,15 @@
                 breakdown.push(`Hints Used: ${hintsUsedCount} (steps with hints: 0 points)`);
             }
             if (bonusPoints > 0) {
-                breakdown.push(`🌟 Perfect Bonus: +${bonusPoints} (no hints used!)`);
+                breakdown.push(`<strong>🌟 Perfect Bonus: +${bonusPoints} (no hints used!)</strong>`);
             }
             
             // Update display
+            teamScore = finalScore;
             updateScoreDisplay();
             document.getElementById('finalScore').textContent = finalScore;
             document.getElementById('scoreBreakdown').innerHTML = breakdown.map(line => 
-                `<p>${line}</p>`
+                `<p class="breakdown-item">${line}</p>`
             ).join('');
             
             // Notify server with scoring data

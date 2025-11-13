@@ -914,6 +914,21 @@ body::before {
     font-size: 0.95rem;
 }
 
+.score-breakdown .breakdown-item {
+    color: var(--text-primary);
+    margin: 10px 0;
+    padding: 5px 10px;
+    font-size: 1rem;
+    line-height: 1.6;
+    background: rgba(0, 255, 255, 0.05);
+    border-left: 2px solid var(--primary-cyan);
+}
+
+.score-breakdown .breakdown-item strong {
+    color: var(--primary-yellow);
+    text-shadow: 0 0 5px var(--primary-yellow);
+}
+
 .mission-failed h2 {
     color: var(--error-red);
     text-shadow: 0 0 10px rgba(255, 0, 68, 0.8);
