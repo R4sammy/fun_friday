@@ -11,7 +11,7 @@ const MISSIONS = {
       "briefing": "Retrieve the encrypted hard drive and exfiltrate undetected from OmniCorp Server Farm, Sub-Level 4.",
       "timer_settings": {
         "enabled": true,
-        "duration_seconds": 600,
+        "duration_seconds": 300,
         "time_up_message": "CRITICAL FAILURE. Security team has arrived. Mission aborted.",
         "penalty_per_hint": 30
       },
@@ -145,7 +145,7 @@ const MISSIONS = {
       "briefing": "Authorized penetration test on the Prometheus legacy server. Goal: Gain root access.",
       "timer_settings": {
         "enabled": true,
-        "duration_seconds": 600,
+        "duration_seconds": 300,
         "time_up_message": "Time's up! Security detected your activities.",
         "penalty_per_hint": 30
       },
@@ -167,7 +167,7 @@ const MISSIONS = {
       "briefing": "Workstation compromised via suspicious download. Analyze the evidence and contain the threat.",
       "timer_settings": {
         "enabled": true,
-        "duration_seconds": 600,
+        "duration_seconds": 300,
         "time_up_message": "Malware has spread to other systems!",
         "penalty_per_hint": 30
       },
@@ -189,7 +189,7 @@ const MISSIONS = {
       "briefing": "Physically infiltrate a high-security facility to plant a listening device.",
       "timer_settings": {
         "enabled": true,
-        "duration_seconds": 600,
+        "duration_seconds": 300,
         "time_up_message": "Security guards spotted you!",
         "penalty_per_hint": 30
       },
@@ -211,7 +211,7 @@ const MISSIONS = {
       "briefing": "Audit the corporate Wi-Fi network 'Corp_Secure'.",
       "timer_settings": {
         "enabled": true,
-        "duration_seconds": 600,
+        "duration_seconds": 300,
         "time_up_message": "Network admin detected your activities!",
         "penalty_per_hint": 30
       },
@@ -233,7 +233,7 @@ const MISSIONS = {
       "briefing": "Break layers of encryption to read the syndicate's message.",
       "timer_settings": {
         "enabled": true,
-        "duration_seconds": 600,
+        "duration_seconds": 300,
         "time_up_message": "Message self-destructed!",
         "penalty_per_hint": 30
       },
@@ -255,7 +255,7 @@ const MISSIONS = {
       "briefing": "Malicious library detected in build pipeline.",
       "timer_settings": {
         "enabled": true,
-        "duration_seconds": 600,
+        "duration_seconds": 300,
         "time_up_message": "Malicious code deployed to production!",
         "penalty_per_hint": 30
       },
@@ -277,7 +277,7 @@ const MISSIONS = {
       "briefing": "Investigate employee data theft.",
       "timer_settings": {
         "enabled": true,
-        "duration_seconds": 600,
+        "duration_seconds": 300,
         "time_up_message": "Evidence destroyed!",
         "penalty_per_hint": 30
       },
@@ -299,7 +299,7 @@ const MISSIONS = {
       "briefing": "Secure an exposed AWS S3 bucket.",
       "timer_settings": {
         "enabled": true,
-        "duration_seconds": 600,
+        "duration_seconds": 300,
         "time_up_message": "Data breach reported in media!",
         "penalty_per_hint": 30
       },
@@ -321,7 +321,7 @@ const MISSIONS = {
       "briefing": "Reverse engineer a malicious APK.",
       "timer_settings": {
         "enabled": true,
-        "duration_seconds": 600,
+        "duration_seconds": 300,
         "time_up_message": "Malware spread to other devices!",
         "penalty_per_hint": 30
       },
@@ -343,7 +343,7 @@ const MISSIONS = {
       "briefing": "Prove how Zero Trust saved the CEO's laptop.",
       "timer_settings": {
         "enabled": true,
-        "duration_seconds": 600,
+        "duration_seconds": 300,
         "time_up_message": "CEO credentials compromised!",
         "penalty_per_hint": 30
       },
