@@ -244,31 +244,45 @@
 
         // Initialize room page
         async function initRoom() {
+            console.log('[INIT] Starting room initialization...', { heistId, roomNumber });
+            
+            // Ensure join section is visible
+            document.getElementById('joinSection').style.display = 'block';
+            document.getElementById('roomSection').style.display = 'none';
+            
             try {
                 const response = await fetch(`/api/heist/${heistId}/room/${roomNumber}`);
+                console.log('[INIT] Fetch response status:', response.status);
+                
                 if (!response.ok) {
-                    throw new Error('Room not found');
+                    throw new Error(`Room not found (HTTP ${response.status})`);
                 }
                 
                 const data = await response.json();
+                console.log('[INIT] Room data loaded:', data);
+                
                 document.getElementById('heistIdDisplay').textContent = data.heistId;
                 document.getElementById('roomNumberDisplay').textContent = data.room.roomNumber;
                 
                 // Load missions data first
                 await loadMissionsData();
+                console.log('[INIT] Missions data loaded');
                 
                 // Load the specific mission based on heist's missionId
                 const missionId = data.heist.missionId || 'mission_obsidian_ledger';
+                console.log('[INIT] Loading mission:', missionId);
                 mission = getMissionByIdFormatted(missionId);
                 
                 if (!mission) {
-                    console.error('Mission not found, using default');
+                    console.error('[INIT] Mission not found, using default');
                     mission = getMission();
                 }
                 
+                console.log('[INIT] Room initialized successfully. Join section is visible.');
+                
             } catch (error) {
-                console.error('Error loading room:', error);
-                alert('Room not found. Redirecting to home...');
+                console.error('[INIT] Error loading room:', error);
+                alert(`Room not found: ${error.message}\n\nRedirecting to home...`);
                 window.location.href = '/';
             }
         }
@@ -768,16 +782,20 @@
         }
 
         function joinRoom() {
+            console.log('[JOIN] Join button clicked');
             const userName = document.getElementById('userNameInput').value.trim();
             
             if (!userName) {
-                alert('Please enter your name or code name');
+                alert('⚠️ Please enter your name or code name');
+                document.getElementById('userNameInput').focus();
                 return;
             }
 
+            console.log('[JOIN] Attempting to join with username:', userName);
             currentUserName = userName;
             
             // Emit join event
+            console.log('[JOIN] Emitting join-room event:', { heistId, roomNumber: parseInt(roomNumber), userName });
             socket.emit('join-room', {
                 heistId,
                 roomNumber: parseInt(roomNumber),
@@ -785,6 +803,7 @@
             });
             
             // Switch views
+            console.log('[JOIN] Switching to room view');
             document.getElementById('joinSection').style.display = 'none';
             document.getElementById('roomSection').style.display = 'block';
             document.getElementById('currentUserName').textContent = userName;
@@ -793,6 +812,7 @@
             showMissionArea('waiting');
             
             isJoined = true;
+            console.log('[JOIN] Join process complete');
         }
 
         function leaveRoom() {
