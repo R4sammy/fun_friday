@@ -10,12 +10,11 @@ services:
     # Environment
     environment_slug: node-js
     
-    # GitHub integration (update with your repo details)
-    # Uncomment and configure when deploying from GitHub
-    # github:
-    #   repo: YOUR_USERNAME/cyber_hiest
-    #   branch: main
-    #   deploy_on_push: true
+    # GitHub integration
+    github:
+      repo: R4sammy/fun_friday
+      branch: main
+      deploy_on_push: true
     
     # HTTP configuration
     http_port: 3000
